@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2019, Lawrence Livermore National Security, LLC.
+ * Copyright (c) 2020, Lawrence Livermore National Security, LLC.
  * Produced at the Lawrence Livermore National Laboratory.
  *
- * Copyright 2019, UT-Battelle, LLC.
+ * Copyright 2020, UT-Battelle, LLC.
  *
  * LLNL-CODE-741539
  * All rights reserved.
@@ -15,10 +15,14 @@
 #ifndef UNIFYFS_API_H
 #define UNIFYFS_API_H
 
+#include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <sys/types.h>
 
+// libunifyfs_common headers
 #include "unifyfs_rc.h"
+#include "unifyfs_configurator.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,39 +32,27 @@ extern "C" {
  * Public Types
  */
 
-/* UnifyFS file system client handle (opaque struct) */
-struct unifyfs_client_handle;
+/* UnifyFS file system client (opaque struct) */
+struct unifyfs_client;
 
 /* UnifyFS file system handle (opaque pointer) */
-typedef struct unifyfs_client_handle* unifyfs_handle;
+typedef struct unifyfs_client* unifyfs_handle;
 
-/* UnifyFS client options */
-typedef struct unifyfs_options {
-    /* namespace prefix (default: '/unifyfs') */
-    char* fs_prefix;
+#define UNIFYFS_INVALID_HANDLE ((unifyfs_handle)NULL)
 
-    /* file system persist path (default: NULL) */
-    char* persist_path;
-
-    /* auto-laminate files opened for writing at close? (default: 0) */
-    int laminate_at_close;
-
-    /* auto-transfer laminated files to persist path upon fini (default: 0) */
-    int transfer_at_finalize;
-
-    /* application debug rank (default: 0) */
-    int debug_rank;
-} unifyfs_options;
 
 /* global file id type */
-typedef int unifyfs_gfid;
-#define UNIFYFS_INVALID_GFID (-1)
+typedef uint32_t unifyfs_gfid;
+
+/* a valid gfid generated via MD5 hash will never be zero */
+#define UNIFYFS_INVALID_GFID ((unifyfs_gfid)0)
 
 /* enumeration of supported I/O request operations */
 typedef enum unifyfs_ioreq_op {
     UNIFYFS_IOREQ_NOP = 0,
     UNIFYFS_IOREQ_OP_READ,
     UNIFYFS_IOREQ_OP_WRITE,
+    UNIFYFS_IOREQ_OP_SYNC,
     UNIFYFS_IOREQ_OP_TRUNC,
     UNIFYFS_IOREQ_OP_ZERO,
 } unifyfs_ioreq_op;
@@ -146,12 +138,13 @@ typedef struct unifyfs_status {
  */
 
 /* Initialize client's use of UnifyFS */
-// TODO: rename to unifyfs_mount()?
-unifyfs_rc unifyfs_initialize(const unifyfs_options* opts,
+// TODO: replace unifyfs_mount()
+unifyfs_rc unifyfs_initialize(const char* mountpoint,
+                              unifyfs_cfg_option* options, int n_opts,
                               unifyfs_handle* fshdl);
 
 /* Finalize client's use of UnifyFS */
-// TODO: rename to unifyfs_unmount()?
+// TODO: replace unifyfs_unmount()
 unifyfs_rc unifyfs_finalize(unifyfs_handle fshdl);
 
 /* Create and open a new file in UnifyFS */
@@ -162,22 +155,17 @@ unifyfs_rc unifyfs_create(unifyfs_handle fshdl,
 
 /* Open an existing file in UnifyFS */
 unifyfs_rc unifyfs_open(unifyfs_handle fshdl,
-                        const int flags,
                         const char* filepath,
                         unifyfs_gfid* gfid);
-
-/* Close an open file in UnifyFS */
-unifyfs_rc unifyfs_close(unifyfs_handle fshdl,
-                         const unifyfs_gfid gfid);
 
 /* Get global file status */
 unifyfs_rc unifyfs_stat(unifyfs_handle fshdl,
                         const unifyfs_gfid gfid,
-                        unifyfs_status* status);
+                        unifyfs_status* st);
 
-/* Local lamination - all client writes have been completed */
-unifyfs_rc unifyfs_laminate_local(unifyfs_handle fshdl,
-                                  const unifyfs_gfid gfid);
+/* Synchronize client writes with server */
+unifyfs_rc unifyfs_sync(unifyfs_handle fshdl,
+                        const unifyfs_gfid gfid);
 
 /* Global lamination - no further writes to file are permitted */
 unifyfs_rc unifyfs_laminate(unifyfs_handle fshdl,
@@ -219,24 +207,6 @@ unifyfs_rc unifyfs_wait_transfer(unifyfs_handle fshdl,
                                  unifyfs_transfer_request* reqs,
                                  const int waitall);
 
-/* Map global file contents into memory starting at given offset */
-unifyfs_rc unifyfs_map(unifyfs_handle fshdl,
-                       const unifyfs_gfid gfid,
-                       const off_t offset,
-                       const size_t length,
-                       void** addr);
-
-/* Remove memory mapping for global file */
-unifyfs_rc unifyfs_unmap(unifyfs_handle fshdl,
-                         const unifyfs_gfid gfid,
-                         const off_t offset,
-                         const void* addr);
-
-/* Sync contents of memory mapping for global file */
-unifyfs_rc unifyfs_map_sync(unifyfs_handle fshdl,
-                            const unifyfs_gfid gfid,
-                            const off_t offset,
-                            const void* addr);
 
 #ifdef __cplusplus
 } // extern "C"

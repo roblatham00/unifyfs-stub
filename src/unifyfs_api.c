@@ -13,7 +13,8 @@
 #include "unifyfs_api.h"
 
 
-unifyfs_rc unifyfs_initialize(const unifyfs_options *opts,
+unifyfs_rc unifyfs_initialize(const char* mountpoint,
+        unifyfs_cfg_option *options, int n_opts,
         unifyfs_handle *fshdl)
 {
     return 0;
@@ -29,16 +30,15 @@ unifyfs_rc unifyfs_create(unifyfs_handle fshdl,
                           const char* filepath,
                           unifyfs_gfid* gfid)
 {
-    return unifyfs_open(fshdl, flags, filepath, gfid);
+    return unifyfs_open(fshdl, filepath, gfid);
 }
 
 unifyfs_rc unifyfs_open(unifyfs_handle fshdl,
-                        const int flags,
                         const char* filepath,
                         unifyfs_gfid* gfid)
 
 {
-    int fd = open(filepath, flags, 0644);
+    int fd = open(filepath, O_CREAT|O_RDWR, 0644);
     *gfid = fd;
     return -errno;
 }
