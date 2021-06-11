@@ -5,8 +5,10 @@ lib_LTLIBRARIES = libunifyfs_api.la
 libunifyfs_api_la_SOURCES = src/unifyfs_api.c \
 		    include/unifyfs_api.h
 
-include_HEADERS = include/unifyfs_api.h \
-		  include/unifyfs_rc.h \
+otherincludedir = $(includedir)/unifyfs
+otherinclude_HEADERS = include/unifyfs_api.h
+
+include_HEADERS = include/unifyfs_rc.h \
 		  include/unifyfs_configurator.h
 
 libunifyfs_api_la_CPPFLAGS = -I${srcdir}/include
